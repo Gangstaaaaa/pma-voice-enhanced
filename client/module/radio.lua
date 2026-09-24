@@ -257,9 +257,7 @@ RegisterCommand('-radiotalk', function()
 		TriggerServerEvent('pma-voice:setTalkingOnRadio', false)
 	end
 end, false)
-if gameVersion == 'fivem' then
-	RegisterKeyMapping('+radiotalk', 'Talk over Radio', 'keyboard', GetConvar('voice_defaultRadio', 'LMENU'))
-end
+RegisterKeyMapping('+radiotalk', 'Talk over Radio', 'keyboard', GetConvar('voice_defaultRadio', 'LMENU'))
 
 local function setRadioTalkAnim(dict, anim)
     type_check({dict, "string"}, {anim, "string"})

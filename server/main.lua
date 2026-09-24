@@ -56,23 +56,19 @@ CreateThread(function()
 
 	Wait(5000)
 
-	local nativeAudio = GetConvar('voice_useNativeAudio', 'not-set')
-	local _3dAudio = GetConvar('voice_use3dAudio', 'not-set')
-	local _2dAudio = GetConvar('voice_use2dAudio', 'not-set')
-	local sendingRangeOnly = GetConvar('voice_useSendingRangeOnly', 'not-set')
-	local gameVersion = GetConvar('gamename', 'fivem')
-
-	-- handle no convars being set (default drag n' drop)
-	if
-		nativeAudio == 'not-set'
-		and _3dAudio == 'not-set'
-		and _2dAudio == 'not-set'
-	then
-		SetConvarReplicated('voice_useNativeAudio', 'true')
-		logger.info('No voice mod detected, defaulting to \'setr voice_useNativeAudio true\'')
-	elseif sendingRangeOnly == 'true' then
-		logger.warn(
-			"It's recommended to have 'voice_useSendingRangeOnly' set to false, you can do that with 'setr voice_useSendingRangeOnly false', this makes clients ignore the position information sent from the client.")
+	-- FiveM for GTAV Enhanced: the Mumble-era audio convars (voice_useNativeAudio,
+	-- voice_use2dAudio, voice_use3dAudio, voice_useSendingRangeOnly) were removed by the
+	-- engine, so they are no longer defaulted or checked here.
+	-- pma-voice still uses the (deprecated) Mumble natives, which only work through the
+	-- compatibility layer. That layer has to be enabled explicitly.
+	if GetConvar('sv_mumble', 'false') ~= 'true' then
+		CreateThread(function()
+			for _ = 1, 3 do
+				logger.warn(
+					"'sv_mumble' is not enabled. pma-voice uses the deprecated Mumble natives and will not work on FiveM for GTAV Enhanced without 'setr sv_mumble true' (and 'voice_internal' in server.cfg).")
+				Wait(5000)
+			end
+		end)
 	end
 
 	local radioVolume = GetConvarInt("voice_defaultRadioVolume", 30)

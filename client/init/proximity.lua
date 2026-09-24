@@ -12,7 +12,8 @@ local listeners = {}
 
 function orig_addProximityCheck(ply)
 	local tgtPed = GetPlayerPed(ply)
-	local voiceRange = GetConvar('voice_useNativeAudio', 'false') == 'true' and proximity * 3 or proximity
+	-- Enhanced has no native audio mode (the old proximity * 3 scaling) so use the range as-is
+	local voiceRange = proximity
 	local distance = #(plyCoords - GetEntityCoords(tgtPed))
 	return distance < voiceRange, distance
 end

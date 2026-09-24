@@ -78,12 +78,10 @@ RegisterCommand('cycleproximity', function()
 	setProximityState(Cfg.voiceModes[mode][1], false)
 	TriggerEvent('pma-voice:setTalkingMode', mode)
 end, false)
-if gameVersion == 'fivem' then
-	RegisterKeyMapping('cycleproximity', 'Cycle Proximity', 'keyboard', GetConvar('voice_defaultCycle', 'F11'))
-end
+RegisterKeyMapping('cycleproximity', 'Cycle Proximity', 'keyboard', GetConvar('voice_defaultCycle', 'F11'))
 
 -- hacky workaround to the fact that you can't bind secondary key mappings to PTT
-if gameVersion == 'fivem' then
+do
 	local isSecondaryPttPressed = false
 
 	RegisterCommand("+secondary_ptt", function()
@@ -103,5 +101,5 @@ if gameVersion == 'fivem' then
 		isSecondaryPttPressed = false
 	end)
 
-	RegisterKeyMapping('+secondary_ptt', 'A keybind that lets you have a secondary PTT', 'PAD_ANALOGBUTTOn', GetConvar('voice_defaultSecondary', 'LUP_INDEX'))
+	RegisterKeyMapping('+secondary_ptt', 'A keybind that lets you have a secondary PTT', 'PAD_ANALOGBUTTON', GetConvar('voice_defaultSecondary', 'LUP_INDEX'))
 end

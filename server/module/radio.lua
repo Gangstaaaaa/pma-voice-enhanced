@@ -139,10 +139,11 @@ function setPlayerRadio(source, _radioChannel)
 			removePlayerFromRadio(source, plyVoice.radio)
 		end
 		local wasAdded = addPlayerToRadio(source, radioChannel)
-		Player(source).state.radioChannel = wasAdded and radioChannel or 0
+		-- Enhanced only replicates state bag values that are explicitly set as replicated
+		Player(source).state:set('radioChannel', wasAdded and radioChannel or 0, true)
 	elseif radioChannel == 0 then
 		removePlayerFromRadio(source, plyVoice.radio)
-		Player(source).state.radioChannel = 0
+		Player(source).state:set('radioChannel', 0, true)
 	end
 end
 

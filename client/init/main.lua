@@ -150,7 +150,6 @@ function toggleVoice(plySource, enabled, moduleType)
 	logger.verbose('[main] Updating %s to talking: %s with submix %s', plySource, enabled, moduleType)
 	local distance = currentTargets[plySource]
 	if enabled and (not distance or distance > 4.0) then
-		print(volumes[moduleType])
 		MumbleSetVolumeOverrideByServerId(plySource, enabled and volumes[moduleType])
 		if GetConvarInt('voice_enableSubmix', 1) == 1 then
 			if moduleType then
@@ -299,24 +298,6 @@ CreateThread(function()
 	end
 end)
 
-
-if gameVersion == 'redm' then
-	function on_key_up() end
-
-	local KEY_F11 = 0x7A
-
-	RegisterRawKeymap("pma-voice_proximityCycle", on_key_up, function()
-		ExecuteCommand('cycleproximity')
-	end, KEY_F11, true)
-
-	local KEY_LEFT_ALT = 0xA4
-
-	RegisterRawKeymap("pma-voice_radioTalk", function()
-			ExecuteCommand('+radiotalk')
-	end, function()
-			ExecuteCommand('-radiotalk')
-	end, KEY_LEFT_ALT, true)
-end
 
 --- handles initializiation for whenever radio or call data changes
 --- calls should always be last because they're assumed to always be enabled so

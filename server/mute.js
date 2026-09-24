@@ -6,7 +6,8 @@ RegisterCommand('muteply', (source, args) => {
 	const duration = parseInt(args[1]) || 900
 	if (mutePly && exports[GetCurrentResourceName()].isValidPlayer(mutePly)) {
 		const isMuted = !MumbleIsPlayerMuted(mutePly);
-		Player(mutePly).state.muted = isMuted;
+		// Enhanced only replicates state bag values that are explicitly set as replicated
+		Player(mutePly).state.set('muted', isMuted, true);
 		MumbleSetPlayerMuted(mutePly, isMuted);
 		emit('pma-voice:playerMuted', mutePly, source, isMuted, duration);
 		// since this is a toggle, if theres a mutedPlayers entry it can be assumed
@@ -15,12 +16,12 @@ RegisterCommand('muteply', (source, args) => {
 			clearTimeout(mutedPlayers[mutePly]);
 			delete mutedPlayers[mutePly];
 			MumbleSetPlayerMuted(mutePly, isMuted)
-			Player(mutePly).state.muted = isMuted;
+			Player(mutePly).state.set('muted', isMuted, true);
 			return;
 		}
 		mutedPlayers[mutePly] = setTimeout(() => {
 			MumbleSetPlayerMuted(mutePly, !isMuted)
-			Player(mutePly).state.muted = !isMuted;
+			Player(mutePly).state.set('muted', !isMuted, true);
 			delete mutedPlayers[mutePly]
 		}, duration * 1000)
 	}

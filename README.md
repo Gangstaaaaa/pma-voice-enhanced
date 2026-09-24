@@ -1,3 +1,11 @@
+> # ⚠️ FiveM for GTAV Enhanced ONLY
+>
+> This version of pma-voice has been modified to run on **FiveM for GTAV Enhanced**. It is **not** intended for FiveM Legacy, and the Legacy-specific options have been removed or replaced in this README.
+>
+> # ⚠️ Disclaimer: AI-assisted changes, errors are possible
+>
+> The Enhanced-specific changes in this version were written with the help of AI and have **not** been fully tested. There may be errors or unexpected behaviour (for example with proximity range, submix effects, or voice initialisation). Please test on a development server before using this in production, and keep a backup of the original resource.
+
 ## PLEASE NOTE: Currently master branch has some breaking changes
 
 If you previously used `voice_defaultPhoneVolume` you will instead need to use `voice_defaultCallVolume`
@@ -6,11 +14,15 @@ If you previously used `voice_enablePhones` you will instead need to use `voice_
 If you were previously using the state bag getter `Player(source).state.phone` you will instead need to use `Player(source).state.call`
 
 # pma-voice
-A voice system designed around the use of FiveM/RedM internal mumble server.
+A voice system designed around the use of the FiveM for GTAV Enhanced internal voice server, using the Mumble compatibility layer.
+
+Based on the original [pma-voice](https://github.com/AvarianKnight/pma-voice) by AvarianKnight.
 
 ## Support
 
-Please report any issues you have in the GitHub [Issues](https://github.com/AvarianKnight/pma-voice/issues)
+Please report any issues you have with the original resource in the GitHub [Issues](https://github.com/AvarianKnight/pma-voice/issues).
+
+Issues caused by the Enhanced changes in this version should **not** be reported to the original repository, since they are not part of the upstream project.
 
 # Compatibility Notice:
 
@@ -20,12 +32,36 @@ Please do not override `NetworkSetTalkerProximity`, `MumbleSetTalkerProximity`, 
 
 # Credits
 
+- @AvarianKnight for pma-voice (the original resource this version is based on)
 - @Frazzle for mumble-voip (for which the concept came from)
 - @pichotm for pVoice (where the grid concept came from)
 
-# FiveM/RedM Config
+# FiveM for GTAV Enhanced Setup
 
-### NOTE: Only use one of the Audio options (don't enable 3d Audio & Native Audio at the same time), its also recommended to always use voice_useSendingRangeOnly.
+FiveM for GTAV Enhanced replaces Mumble with a new voice implementation. pma-voice still uses the (now **deprecated**) Mumble natives, which only work through the Mumble compatibility layer. That layer, and the internal voice server, have to be enabled in your `server.cfg`:
+
+```cfg
+voice_internal
+setr sv_mumble true
+```
+
+#### Security note
+
+Enabling `sv_mumble` allows client-controlled voice channels. Any client can join any channel and listen to any conversation. This is how pma-voice currently works, so keep it in mind. The Mumble natives are deprecated and will be removed in a future version of FiveM for GTAV Enhanced, at which point pma-voice will need to be migrated to the new server-side voice API.
+
+#### What was changed for Enhanced
+
+- Removed the use of the `voice_useNativeAudio`, `voice_use2dAudio`, `voice_use3dAudio` and `voice_useSendingRangeOnly` convars (they no longer exist on Enhanced). Voice mode distances are always the standard Whisper 3.0 / Normal 7.0 / Shouting 15.0.
+- The server no longer defaults `voice_useNativeAudio` to `true`, and now warns if `sv_mumble` is not enabled.
+- Added a fallback for voice initialisation in case the `mumbleConnected` event is not fired by the compatibility layer.
+- Server-side state bag values (`radioChannel`, `callChannel`, `muted`) are now set explicitly as replicated.
+- Removed the external Mumble server convars from the manifest and this README (see below).
+- Removed a leftover debug `print` and fixed a mistyped key mapping type for the secondary push-to-talk keybind.
+- Removed the RedM-only code (RedM native wrappers and raw keymaps) and the FiveM/RedM game checks, so the keybinds always register. The manifest now targets `gta5` only.
+
+The public exports, events and state bags listed below were left unchanged, so resources that integrate with pma-voice (radio and phone resources, for example) should keep working.
+
+# FiveM for GTAV Enhanced Config
 
 You only need to add the convar **if** you're changing the value.
 
@@ -33,10 +69,20 @@ All of the configs here are set using `setr [voice_configOption] [boolean]`
 
 | ConVar                     | Default | Description                                                   | Parameter(s) |
 |----------------------------|---------|---------------------------------------------------------------|--------------|
-| voice_useNativeAudio       |  false  | Uses the games native audio, will add 3d sound, echo, reverb, and more. **Required for submixs**   | boolean      |
-| voice_use2dAudio           |  false  | Uses 2d audio, will result in same volume sound no matter where they're at until they leave proximity. | boolean
-| voice_use3dAudio           |  false  | Uses 3d audio | boolean |
-| voice_useSendingRangeOnly  |  false  | Only allows you to hear people within your hear/send range, prevents people from connecting to your mumble server and trolling. | boolean      |
+| sv_mumble                  |  false  | Enables the Mumble compatibility layer. **Required for pma-voice to work on Enhanced** | boolean      |
+
+#### Removed on FiveM for GTAV Enhanced
+
+The following convars no longer exist on Enhanced and have no effect, do not set them:
+
+| ConVar                     | Notes                                                         |
+|----------------------------|---------------------------------------------------------------|
+| voice_useNativeAudio       | Removed by the engine. Native audio is no longer available.   |
+| voice_use2dAudio           | Removed by the engine.                                        |
+| voice_use3dAudio           | Removed by the engine.                                        |
+| voice_useSendingRangeOnly  | Removed by the engine.                                        |
+
+`voice_inBitrate` (set by the client) still works the same as before.
 
 # Config
 
@@ -69,7 +115,7 @@ All of the configs here are set using `setr [voice_configOption] [int]` OR `setr
 |-------------------------|---------|--------------------------------------------------------------------|--------------|
 | voice_enableRadios           |    1    | Enables the radio sub-modules                                 | int          |
 | voice_enableCalls           |    1    | Enables the call sub-modules                                 | int          |
-| voice_enableSubmix      |    1    | Enables the submix which adds a radio/call style submix to their voice **NOTE: Submixs require native audio** | int          |
+| voice_enableSubmix      |    1    | Enables the submix which adds a radio/call style submix to their voice **NOTE: The native audio option this used to depend on was removed on Enhanced, so submix effects are untested and may not work** | int          |
 | voice_enableRadioAnim        |   1     | Enables (grab shoulder mic) animation while talking on the radio.          | int          |
 | voice_defaultRadio           |   LMENU  | The default key to use the radio. You can find a list of valid keys [in the FiveM docs](https://docs.fivem.net/docs/game-references/input-mapper-parameter-ids/keyboard/)                             | string       |
 
@@ -79,17 +125,16 @@ All of the configs here are set using `setr [voice_configOption] [int]` OR `setr
 |-------------------------|---------|--------------------------------------------------------------------|--------------|
 | voice_refreshRate   |   200    | How often the UI/Proximity is refreshed | int     |
 
-### External Server & Misc.
+### Misc.
 | ConVar                  | Default | Description                                                        | Parameter(s) |
 |-------------------------|---------|--------------------------------------------------------------------|--------------|
-| voice_allowSetIntent         |   1  | Whether or not to allow players to set their audio intents (you can see more [here](https://docs.fivem.net/natives/?_0x6383526B))  | int       |
-| voice_externalAddress        |   none  | The external address to use to connect to the mumble server   | string       |
-| voice_externalPort           |   0     | The external port to use                                      | int          |
+| voice_allowSetIntent         |   1  | Whether or not to allow players to set their audio intents (you can see more [here](https://docs.fivem.net/natives/?_0x6383526B)). *Untested on Enhanced, the new voice stack has its own noise and echo cancellation.*  | int       |
 | voice_debugMode              |   0     | 1 for basic logs, 4 for verbose logs                          | int          |
-| voice_externalDisallowJoin   |   0     | Disables players being allowed to join the server, should only be used if you're using a FXServer as a external mumble server. | int          |
-| voice_hideEndpoints     | 1   | Hides the mumble address in logs *NOTE: You should only care to hide this for a external server.* | int        |
+| voice_hideEndpoints     | 1   | Hides the voice server address in logs | int        |
 
+#### External voice server
 
+The external Mumble server convars (`voice_externalAddress`, `voice_externalPort` and `voice_externalDisallowJoin`) are Mumble-specific and are no longer used in this version. FiveM for GTAV Enhanced has its own (very experimental) external voice server, configured with `voice_external_host` and `voice_external_connect`. See the [Cfx voice documentation](https://docs.fivem.net/docs/scripting-manual/voice/) for details. It has not been tested with this resource.
 
 ### Aces
 

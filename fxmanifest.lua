@@ -1,9 +1,9 @@
-game 'common'
+game 'gta5'
 version '7.0.1'
 
 fx_version 'cerulean'
 author 'AvarianKnight'
-description 'VOIP built using FiveM\'s built in mumble.'
+description 'VOIP built on FiveM\'s Mumble natives. On FiveM for GTAV Enhanced this needs the Mumble compatibility layer: voice_internal + setr sv_mumble true.'
 
 dependencies {
 	'/onesync',
@@ -44,12 +44,12 @@ provides {
 	'tokovoip_script'
 }
 
+-- voice_useNativeAudio, voice_use2dAudio, voice_useSendingRangeOnly and the external Mumble
+-- server convars are not available on FiveM for GTAV Enhanced, so they are no longer listed.
 convar_category 'PMA-Voice' {
 	"PMA-Voice Configuration Options",
 	{
-		{ "Use native audio",                      "$voice_useNativeAudio",       "CV_BOOL",   "false" },
-		{ "Use 2D audio",                          "$voice_use2dAudio",           "CV_BOOL",   "false" },
-		{ "Use sending range only",                "$voice_useSendingRangeOnly",  "CV_BOOL",   "false" },
+		{ "Mumble compatibility (required on Enhanced)", "$sv_mumble",              "CV_BOOL",   "true" },
 		{ "Enable UI",                             "$voice_enableUi",             "CV_INT",    "1" },
 		{ "Enable F11 proximity key",              "$voice_enableProximityCycle", "CV_INT",    "1" },
 		{ "Proximity cycle key",                   "$voice_defaultCycle",         "CV_STRING", "F11" },
@@ -62,10 +62,7 @@ convar_category 'PMA-Voice' {
 		{ "Radio key",                             "$voice_defaultRadio",         "CV_STRING", "LMENU" },
 		{ "UI refresh rate",                       "$voice_uiRefreshRate",        "CV_INT",    "200" },
 		{ "Allow players to set audio intent",     "$voice_allowSetIntent",       "CV_INT",    "1" },
-		{ "External mumble server address",        "$voice_externalAddress",      "CV_STRING", "" },
-		{ "External mumble server port",           "$voice_externalPort",         "CV_INT",    "0" },
 		{ "Voice debug mode",                      "$voice_debugMode",            "CV_INT",    "0" },
-		{ "Disable players being allowed to join", "$voice_externalDisallowJoin", "CV_INT",    "0" },
 		{ "Hide server endpoints in logs",         "$voice_hideEndpoints",        "CV_INT",    "1" },
 	}
 }
