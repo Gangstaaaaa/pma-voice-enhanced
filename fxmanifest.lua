@@ -1,5 +1,5 @@
 game 'gta5'
-version '7.0.1'
+version '7.0.2'
 
 fx_version 'cerulean'
 author 'AvarianKnight'
