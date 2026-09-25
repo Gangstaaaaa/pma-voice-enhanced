@@ -8,6 +8,8 @@
 
 ## PLEASE NOTE: Currently master branch has some breaking changes
 
+if you experience the hud not talking make sure you enable voice chat cause I had the same issue.
+
 If you previously used `voice_defaultPhoneVolume` you will instead need to use `voice_defaultCallVolume`
 If you previously used `voice_enablePhones` you will instead need to use `voice_enableCalls`
 
