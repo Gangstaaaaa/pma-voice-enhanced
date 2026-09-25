@@ -26,10 +26,6 @@ function syncRadioData(radioTable, localPlyRadioName)
 
 	local isEnabled = isRadioEnabled()
 
-	if isEnabled then
-		handleRadioAndCallInit()
-	end
-
 	sendUIMessage({
 		radioChannel = radioChannel,
 		radioEnabled = isEnabled
@@ -49,9 +45,10 @@ function setTalkingOnRadio(plySource, enabled)
 	radioData[plySource] = enabled
 
 	if not isRadioEnabled() then return logger.info("[radio] Ignoring setTalkingOnRadio. radioEnabled: %s disableRadio: %s", radioEnabled, LocalPlayer.state.disableRadio) end
-	-- If we're on a call we don't want to toggle their voice disabled this will break calls.
+	-- FiveM for GTAV Enhanced: actual radio audio is now handled entirely server-side by
+	-- muting/unmuting the talker in their radio voice channel, so there's nothing left to
+	-- do here except play the radio click sound for everyone listening on the channel.
 	local enabled = enabled or callData[plySource]
-	toggleVoice(plySource, enabled, 'radio')
 	playMicClicks(enabled)
 end
 RegisterNetEvent('pma-voice:setTalkingOnRadio', setTalkingOnRadio)
@@ -64,11 +61,7 @@ function addPlayerToRadio(plySource, plyRadioName)
 	if GetConvarInt("voice_syncPlayerNames", 0) == 1 then
 		radioNames[plySource] = plyRadioName
 	end
-	logger.info('[radio] %s joined radio %s %s', plySource, radioChannel,
-		radioPressed and " while we were talking, adding them to targets" or "")
-	if radioPressed then
-		addVoiceTargets(radioData, callData)
-	end
+	logger.info('[radio] %s joined radio %s', plySource, radioChannel)
 end
 RegisterNetEvent('pma-voice:addPlayerToRadio', addPlayerToRadio)
 
@@ -78,23 +71,15 @@ RegisterNetEvent('pma-voice:addPlayerToRadio', addPlayerToRadio)
 function removePlayerFromRadio(plySource)
 	if plySource == playerServerId then
 		logger.info('[radio] Left radio %s, cleaning up.', radioChannel)
-		for tgt, _ in pairs(radioData) do
-			if tgt ~= playerServerId then
-				toggleVoice(tgt, false, 'radio')
-			end
-		end
 		sendUIMessage({
 			radioChannel = 0,
 			radioEnabled = radioEnabled
 		})
 		radioNames = {}
 		radioData = {}
-		addVoiceTargets(callData)
 	else
-		toggleVoice(plySource, false, 'radio')
 		if radioPressed then
 			logger.info('[radio] %s left radio %s while we were talking, updating targets.', plySource, radioChannel)
-			addVoiceTargets(radioData, callData)
 		else
 			logger.info('[radio] %s has left radio %s', plySource, radioChannel)
 		end
@@ -192,8 +177,10 @@ RegisterCommand('+radiotalk', function()
 	if not isRadioEnabled() then return end
 	if not radioPressed then
 		if radioChannel > 0 then
-			logger.info('[radio] Start broadcasting, update targets and notify server.')
-			addVoiceTargets(radioData, callData)
+			logger.info('[radio] Start broadcasting, notify server.')
+			-- FiveM for GTAV Enhanced: the server unmutes us in the radio voice channel on this
+			-- event (see setTalkingOnRadio in server/module/radio.lua); there's no client-side
+			-- voice target to update anymore.
 			TriggerServerEvent('pma-voice:setTalkingOnRadio', true)
 			radioPressed = true
 			local shouldPlayAnimation = isRadioAnimEnabled()
@@ -246,8 +233,6 @@ end, false)
 RegisterCommand('-radiotalk', function()
 	if radioChannel > 0 and radioPressed then
 		radioPressed = false
-		MumbleClearVoiceTargetPlayers(voiceTarget)
-		addVoiceTargets(callData)
 		TriggerEvent("pma-voice:radioActive", false)
 		LocalPlayer.state:set("radioActive", false, true);
 		playMicClicks(false)

@@ -1,27 +1,4 @@
-AddStateBagChangeHandler("submix", "", function(bagName, _, value)
-	local tgtId = tonumber(bagName:gsub('player:', ''), 10)
-	if not tgtId then return end
-	-- We got an invalid submix, discard we don't care about it
-	if value and not submixIndicies[value] then
-		return logger.warn("Player %s applied submix %s but it isn't valid",
-			tgtId, value)
-	end
-
-	-- we don't want to reset submix if the player is talking on the radio
-	if not value then
-		if not radioData[tgtId] and not callData[tgtId] then
-			logger.info("Resetting submix for player %s", tgtId)
-			MumbleSetSubmixForServerId(tgtId, -1)
-		end
-		return
-	end
-	logger.info("%s had their submix set to %s", tgtId, value)
-	MumbleSetSubmixForServerId(tgtId, submixIndicies[value])
-end)
-
-RegisterNetEvent("onPlayerDropped", function(tgtId)
-	if not radioData[tgtId] and not callData[tgtId] then
-		logger.info("Resetting submix for player %s", tgtId)
-		MumbleSetSubmixForServerId(tgtId, -1)
-	end
-end)
+-- FiveM for GTAV Enhanced: submix effects (MumbleSetSubmixForServerId) have no equivalent
+-- in the new voice API and are no longer used anywhere in this resource. This file is kept
+-- (empty) only so it doesn't 404 if something external still references the path; it is no
+-- longer loaded by fxmanifest.lua's client_scripts.

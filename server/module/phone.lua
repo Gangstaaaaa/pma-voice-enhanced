@@ -1,3 +1,19 @@
+-- FiveM for GTAV Enhanced: calls are now a real server-owned non-spatial voice channel
+-- (CreateVoiceChannel(0, 0.0)) instead of client-side Mumble voice targets. Calls are
+-- always-on in both directions (no push-to-talk), so unlike radio.lua, players are added
+-- unmuted and stay that way for the duration of the call.
+
+callChannels = {} -- callChannel id -> voice channel ID (non-spatial)
+
+--- gets (or lazily creates) the voice channel backing a call id
+---@param callChannel number
+local function getOrCreateCallChannel(callChannel)
+	if not callChannels[callChannel] then
+		callChannels[callChannel] = CreateVoiceChannel(0, 0.0)
+	end
+	return callChannels[callChannel]
+end
+
 --- removes a player from the call for everyone in the call.
 ---@param source number the player to remove from the call
 ---@param callChannel number the call channel to remove them from
@@ -11,6 +27,15 @@ function removePlayerFromCall(source, callChannel)
 	callData[callChannel][source] = nil
 	voiceData[source] = voiceData[source] or defaultTable(source)
 	voiceData[source].call = 0
+
+	local channelId = callChannels[callChannel]
+	if channelId then
+		RemovePlayerFromVoiceChannel(channelId, source)
+		if not next(callData[callChannel]) then
+			DeleteVoiceChannel(channelId)
+			callChannels[callChannel] = nil
+		end
+	end
 end
 
 --- adds a player to a call
@@ -30,6 +55,10 @@ function addPlayerToCall(source, callChannel)
 	callData[callChannel][source] = true
 	voiceData[source] = voiceData[source] or defaultTable(source)
 	voiceData[source].call = callChannel
+
+	-- calls are always-on both ways, no push-to-talk, so no mute step needed here
+	addToVoiceChannel(getOrCreateCallChannel(callChannel), source)
+
 	TriggerClientEvent('pma-voice:syncCallData', source, callData[callChannel])
 end
 
@@ -57,7 +86,6 @@ function setPlayerCall(source, _callChannel)
 		TriggerClientEvent('pma-voice:clSetPlayerCall', source, callChannel)
 	end
 
-	-- Enhanced only replicates state bag values that are explicitly set as replicated
 	Player(source).state:set('callChannel', callChannel, true)
 
 	if callChannel ~= 0 and plyVoice.call == 0 then

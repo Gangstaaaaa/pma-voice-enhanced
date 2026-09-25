@@ -1,6 +1,7 @@
 Cfg = {}
 
-voiceTarget = 1
+-- FiveM for GTAV Enhanced: voice targets were a client-side Mumble concept and have no
+-- equivalent (or any remaining callers) in the new server-owned voice channel API.
 
 -- these are just here to satisfy linting
 if not IsDuplicityVersion() then

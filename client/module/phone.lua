@@ -1,32 +1,23 @@
+-- FiveM for GTAV Enhanced: call audio is handled entirely server-side by real channel
+-- membership now (see server/module/phone.lua), so this file only tracks callData locally
+-- for radio.lua's mic-click logic. There's no client-side voice target, per-listener
+-- toggle, or talking-check equivalent left to update here.
+
 local callChannel = 0
 
 RegisterNetEvent('pma-voice:syncCallData', function(callTable, channel)
 	callData = callTable
-	handleRadioAndCallInit()
 end)
 
 RegisterNetEvent('pma-voice:addPlayerToCall', function(plySource)
-	toggleVoice(plySource, true, 'call')
 	callData[plySource] = true
 end)
 
 RegisterNetEvent('pma-voice:removePlayerFromCall', function(plySource)
 	if plySource == playerServerId then
-		for tgt, _ in pairs(callData) do
-			if tgt ~= playerServerId then
-				toggleVoice(tgt, false, 'call')
-			end
-		end
 		callData = {}
-		MumbleClearVoiceTargetPlayers(voiceTarget)
-		addVoiceTargets((radioPressed and isRadioEnabled()) and radioData or {}, callData)
 	else
 		callData[plySource] = nil
-		toggleVoice(plySource, radioData[plySource], 'call')
-		if MumbleIsPlayerTalking(PlayerId()) then
-			MumbleClearVoiceTargetPlayers(voiceTarget)
-			addVoiceTargets((radioPressed and isRadioEnabled()) and radioData or {}, callData)
-		end
 	end
 end)
 

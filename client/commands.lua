@@ -1,22 +1,26 @@
 local wasProximityDisabledFromOverride = false
 disableProximityCycle = false
-RegisterCommand('setvoiceintent', function(source, args)
-	if GetConvarInt('voice_allowSetIntent', 1) == 1 then
-		local intent = args[1]
-		if intent == 'speech' then
-			MumbleSetAudioInputIntent(`speech`)
-		elseif intent == 'music' then
-			MumbleSetAudioInputIntent(`music`)
-		end
-		LocalPlayer.state:set('voiceIntent', intent, true)
-	end
-end)
-TriggerEvent('chat:addSuggestion', '/setvoiceintent', 'Sets the players voice intent', {
-	{
-		name = "intent",
-		help = "speech is default and enables noise suppression & high pass filter, music disables both of these."
-	},
-})
+
+-- FiveM for GTAV Enhanced: MumbleSetAudioInputIntent has no replacement in the new voice
+-- API, so /setvoiceintent can no longer do anything. Commented out (not deleted) rather
+-- than removed outright.
+-- RegisterCommand('setvoiceintent', function(source, args)
+-- 	if GetConvarInt('voice_allowSetIntent', 1) == 1 then
+-- 		local intent = args[1]
+-- 		if intent == 'speech' then
+-- 			MumbleSetAudioInputIntent(`speech`)
+-- 		elseif intent == 'music' then
+-- 			MumbleSetAudioInputIntent(`music`)
+-- 		end
+-- 		LocalPlayer.state:set('voiceIntent', intent, true)
+-- 	end
+-- end)
+-- TriggerEvent('chat:addSuggestion', '/setvoiceintent', 'Sets the players voice intent', {
+-- 	{
+-- 		name = "intent",
+-- 		help = "speech is default and enables noise suppression & high pass filter, music disables both of these."
+-- 	},
+-- })
 
 -- TODO: Better implementation of this?
 RegisterCommand('vol', function(_, args)
@@ -32,23 +36,31 @@ exports('setAllowProximityCycleState', function(state)
 	disableProximityCycle = state
 end)
 
-function setProximityState(proximityRange, isCustom)
-	local voiceModeData = Cfg.voiceModes[mode]
-	MumbleSetTalkerProximity(proximityRange + 0.0)
-	LocalPlayer.state:set('proximity', {
-		index = mode,
-		distance = proximityRange,
-		mode = isCustom and "Custom" or voiceModeData[2],
-	}, true)
+-- FiveM for GTAV Enhanced: proximity range is enforced by the server-owned spatial voice
+-- channel (see server/main.lua), not by a client native like the old MumbleSetTalkerProximity.
+-- These functions now just tell the server which channel to put us in and update the local
+-- UI label optimistically; Player(source).state.proximity (set server-side) stays the real
+-- source of truth and is what's synced to the client automatically.
+
+--- switches to one of the predefined voiceModes by index, notifying the server so it can
+--- move us into the matching spatial channel.
+---@param modeIndex number index into Cfg.voiceModes
+function setProximityState(modeIndex)
+	mode = modeIndex
+	TriggerServerEvent('pma-voice:setProximityMode', modeIndex)
 	sendUIMessage({
 		-- JS expects this value to be - 1, "custom" voice is on the last index
-		voiceMode = isCustom and #Cfg.voiceModes or mode - 1
+		voiceMode = modeIndex - 1
 	})
 end
 
 exports("overrideProximityRange", function(range, disableCycle)
 	type_check({ range, "number" })
-	setProximityState(range, true)
+	TriggerServerEvent('pma-voice:overrideProximityRange', range)
+	sendUIMessage({
+		-- JS expects this value to be - 1, "custom" voice is on the last index
+		voiceMode = #Cfg.voiceModes
+	})
 	if disableCycle then
 		disableProximityCycle = true
 		wasProximityDisabledFromOverride = true
@@ -56,10 +68,13 @@ exports("overrideProximityRange", function(range, disableCycle)
 end)
 
 exports("clearProximityOverride", function()
-	local voiceModeData = Cfg.voiceModes[mode]
-	setProximityState(voiceModeData[1], false)
+	TriggerServerEvent('pma-voice:clearProximityOverride')
+	sendUIMessage({
+		voiceMode = mode - 1
+	})
 	if wasProximityDisabledFromOverride then
 		disableProximityCycle = false
+		wasProximityDisabledFromOverride = false
 	end
 end)
 
@@ -69,14 +84,11 @@ RegisterCommand('cycleproximity', function()
 	local newMode = mode + 1
 
 	-- If we're within the range of our voice modes, allow the increase, otherwise reset to the first state
-	if newMode <= #Cfg.voiceModes then
-		mode = newMode
-	else
-		mode = 1
+	if newMode > #Cfg.voiceModes then
+		newMode = 1
 	end
 
-	setProximityState(Cfg.voiceModes[mode][1], false)
-	TriggerEvent('pma-voice:setTalkingMode', mode)
+	setProximityState(newMode)
 end, false)
 RegisterKeyMapping('cycleproximity', 'Cycle Proximity', 'keyboard', GetConvar('voice_defaultCycle', 'F11'))
 

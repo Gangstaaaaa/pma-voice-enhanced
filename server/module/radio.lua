@@ -1,5 +1,10 @@
+-- FiveM for GTAV Enhanced: radio channel membership is now a real server-owned voice
+-- channel (CreateVoiceChannel(0, 0.0), non-spatial) instead of client-side Mumble voice
+-- targets. Players join the channel muted (can hear, can't transmit) and get unmuted only
+-- while actively holding their radio talk key - see setTalkingOnRadio below. This means
+-- pma-voice's radio implementation no longer needs a "voice target" concept at all.
 
-local msgpack_pack_args = msgpack.pack_args
+radioChannels = {} -- freq -> voice channel ID (non-spatial)
 
 local radioChecks = {}
 
@@ -53,10 +58,10 @@ local radioNameGetter = radioNameGetter_orig
 --- triggers an event for all of the players in the table while only doing msgpack
 --- serialization once
 local function triggerEventForRadioChannel(eventName, radioTbl, ...)
-		local payload = msgpack_pack_args(...)
-		for player, _ in pairs(radioTbl) do
-			TriggerClientEventInternal(eventName, player, payload, payload:len())
-		end
+	local payload = msgpack.pack_args(...)
+	for player, _ in pairs(radioTbl) do
+		TriggerClientEventInternal(eventName, player, payload, payload:len())
+	end
 end
 
 --- adds a check to the channel, function is expected to return a boolean of true or false
@@ -72,7 +77,17 @@ end
 
 exports('overrideRadioNameGetter', overrideRadioNameGetter)
 
---- adds a player to the specified radion channel
+--- gets (or lazily creates) the voice channel backing a radio frequency
+---@param radioChannel number
+local function getOrCreateRadioChannel(radioChannel)
+	if not radioChannels[radioChannel] then
+		radioChannels[radioChannel] = CreateVoiceChannel(0, 0.0) -- non-spatial
+		logger.verbose('[radio] Created voice channel %s for frequency %s', radioChannels[radioChannel], radioChannel)
+	end
+	return radioChannels[radioChannel]
+end
+
+--- adds a player to the specified radio channel
 ---@param source number the player to add to the channel
 ---@param radioChannel number the channel to set them to
 ---@return boolean wasAdded if the player was successfuly added to the radio channel, or if it failed.
@@ -85,14 +100,19 @@ function addPlayerToRadio(source, radioChannel)
 	end
 	logger.verbose('[radio] Added %s to radio %s', source, radioChannel)
 
-	-- check if the channel exists, if it does set the varaible to it
-	-- if not create it (basically if not radiodata make radiodata)
 	radioData[radioChannel] = radioData[radioChannel] or {}
 	local plyName = radioNameGetter(source)
 	triggerEventForRadioChannel('pma-voice:addPlayerToRadio', radioData[radioChannel], source, plyName)
 	voiceData[source] = voiceData[source] or defaultTable(source)
 	voiceData[source].radio = radioChannel
 	radioData[radioChannel][source] = false
+
+	-- join muted: they can hear the channel immediately, but only transmit while holding
+	-- their radio talk key (setTalkingOnRadio unmutes/mutes them for that)
+	local channelId = getOrCreateRadioChannel(radioChannel)
+	addToVoiceChannel(channelId, source)
+	SetPlayerMutedInVoiceChannel(channelId, source, true)
+
 	TriggerClientEvent('pma-voice:syncRadioData', source, radioData[radioChannel],
 		GetConvarInt("voice_syncPlayerNames", 0) == 1 and plyName)
 	return true
@@ -108,6 +128,16 @@ function removePlayerFromRadio(source, radioChannel)
 	radioData[radioChannel][source] = nil
 	voiceData[source] = voiceData[source] or defaultTable(source)
 	voiceData[source].radio = 0
+
+	local channelId = radioChannels[radioChannel]
+	if channelId then
+		RemovePlayerFromVoiceChannel(channelId, source)
+		if not next(radioData[radioChannel]) then
+			-- nobody's tuned into this frequency anymore, clean the channel up
+			DeleteVoiceChannel(channelId)
+			radioChannels[radioChannel] = nil
+		end
+	end
 end
 
 -- TODO: Implement this in a way that allows players to be on multiple channels
@@ -139,7 +169,6 @@ function setPlayerRadio(source, _radioChannel)
 			removePlayerFromRadio(source, plyVoice.radio)
 		end
 		local wasAdded = addPlayerToRadio(source, radioChannel)
-		-- Enhanced only replicates state bag values that are explicitly set as replicated
 		Player(source).state:set('radioChannel', wasAdded and radioChannel or 0, true)
 	elseif radioChannel == 0 then
 		removePlayerFromRadio(source, plyVoice.radio)
@@ -153,15 +182,19 @@ RegisterNetEvent('pma-voice:setPlayerRadio', function(radioChannel)
 	setPlayerRadio(source, radioChannel)
 end)
 
---- syncs the player talking across all radio members
+--- toggles the players actual radio microphone (mutes/unmutes them in their radio voice
+--- channel) and syncs their talking state to the rest of the channel for anim/UI purposes.
 ---@param talking boolean sets if the palyer is talking.
 function setTalkingOnRadio(talking)
 	if GetConvarInt('voice_enableRadios', 1) ~= 1 then return end
 	voiceData[source] = voiceData[source] or defaultTable(source)
 	local plyVoice = voiceData[source]
 	local radioTbl = radioData[plyVoice.radio]
-	if radioTbl then
+	local channelId = radioChannels[plyVoice.radio]
+	if radioTbl and channelId then
 		radioTbl[source] = talking
+		-- a globally-muted (/muteply) player never actually gets unmuted here
+		SetPlayerMutedInVoiceChannel(channelId, source, not talking or mutedPlayers[source] == true)
 		logger.verbose('[radio] Set %s to talking: %s on radio %s', source, talking, plyVoice.radio)
 		triggerEventForRadioChannel('pma-voice:setTalkingOnRadio', radioTbl, source, talking)
 	end
